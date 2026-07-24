@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGCO LATAM - Forecast Intelligence</title>
+    <!-- Importando Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --agco-blue: #005A9C;
+            --agco-dark: #343a40;
+            --agco-light: #f8f9fa;
+            --bg-color: #f1f3f5;
+            --pos-color: #28a745;
+            --neg-color: #dc3545;
+            --neutral-color: #adb5bd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--agco-dark);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- HEADER & KPIs --- */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .header-title h1 {
+            margin: 0;
+            color: var(--agco-blue);
+            font-size: 24px;
+        }
+
+        .header-title p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .kpi-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--agco-light);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--agco-blue);
+            min-width: 150px;
+        }
+
+        .kpi-card.positive { border-left-color: var(--pos-color); }
+        .kpi-card.negative { border-left-color: var(--neg-color); }
+
+        .kpi-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        /* --- TABS DE PAÍS --- */
+        .country-tabs-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .country-tab-btn {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6c757d;
+        }
+
+        .country-tab-btn.active, .country-tab-btn:hover {
+            background: var(--agco-blue);
+            color: white;
+            border-color: var(--agco-blue);
+        }
+
+        /* --- TABS DE PRODUTO --- */
+        .prod-tabs-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+
+        .prod-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #6c757d;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        .prod-tab-btn.active {
+            background: var(--agco-blue);
+            color: white;
+        }
+
+        .prod-tab-btn:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        /* --- TABELAS --- */
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--agco-dark);
+        }
+
+        td.num {
+            text-align: right;
+        }
+
+        /* --- BOTÃO EXCEL --- */
+        .btn-excel {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #107c41; /* Verde Excel */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-excel:hover {
+            background-color: #0c5e31;
+        }
+
+        /* --- LEGENDA --- */
+        .legend-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 14px; height: 14px; border-radius: 3px; }
+        
+        .impact-high-pos { color: white; background-color: #198754; text-align: center; font-weight: bold; }
+        .impact-med-pos { color: white; background-color: #79c99e; text-align: center; font-weight: bold; }
+        .impact-neutral { color: white; background-color: #adb5bd; text-align: center; font-weight: bold; }
+        .impact-med-neg { color: white; background-color: #f1aeb5; text-align: center; font-weight: bold; }
+        .impact-high-neg { color: white; background-color: #dc3545; text-align: center; font-weight: bold; }
+
+        .impact-cell {
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* --- CARDS DA IA (DRIVERS) --- */
+        .driver-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .driver-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-top: 4px solid var(--neutral-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .driver-card.up { border-top-color: var(--pos-color); }
+        .driver-card.down { border-top-color: var(--neg-color); }
+
+        .driver-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .driver-text {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        /* CONTROLES DE IDIOMA */
+        .lang-controls {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        .lang-btn {
+            background: white; border: 1px solid #ccc; padding: 4px 8px; margin-left: 5px; border-radius: 4px; cursor: pointer;
+        }
+        .lang-btn.active { background: var(--agco-blue); color: white; border-color: var(--agco-blue); }
+        .i18n-text { display: none; }
+        
+    </style>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+        --agco-red: #C8102E; --agco-red-hover: #A30B22; --agco-red-dark: #8B0A1D;
+        --agco-black: #111111; --agco-dark: #1F1F1F; --agco-gray-dark: #2B2B2B;
+        --agco-gray: #F4F4F4; --agco-silver: #D8D8D8;
+
+        --primary-bg: #F5F5F5; --card-bg: #FFFFFF;
+        --text-heading: #111111; --text-body: #3A3A3A; --text-muted: #6B7280;
+
+        --border-color: #E5E7EB;
+        --shadow-soft: 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+        --shadow-hover: 0 6px 12px -3px rgba(200, 16, 46, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+        
+        --color-hp: #0B7A3B; --bg-hp: #D1FADF;
+        --color-mp: #22A05B; --bg-mp: #E6FBEE;
+        --color-n: #6B7280;  --bg-n: #F1F2F4;
+        --color-mn: #E5484D; --bg-mn: #FEECEC;
+        --color-hn: #C8102E; --bg-hn: #FDE2E4;
+    }
+
+    body {
+        background-color: var(--primary-bg); font-family: 'Inter', sans-serif;
+        color: var(--text-body); -webkit-font-smoothing: antialiased; line-height: 1.5;
+    }
+    h1, h2, h3, h4, h5 { font-family: 'Poppins', sans-serif; }
+
+    button { outline: none !important; -webkit-tap-highlight-color: transparent !important; -webkit-appearance: none !important; appearance: none !important; }
+    button:focus, button:active, button:focus-visible, button:-webkit-any-link { outline: none !important; box-shadow: none !important; -webkit-tap-highlight-color: transparent !important; }
+    *:focus { outline-color: var(--agco-red) !important; }
+
+    .num { font-family: 'JetBrains Mono', monospace; font-size: 0.88em !important; }
+    .positive { color: var(--color-hp) !important; }
+    .negative { color: var(--color-hn) !important; }
+    .info     { color: var(--text-muted) !important; }
+    
+    .section-title {
+        color: var(--text-heading); font-size: 1.15rem; font-weight: 600; letter-spacing: -0.015em; margin-bottom: 0.5rem; border-left: 4px solid var(--agco-red); padding-left: 0.7rem; display: flex; align-items: center;
+    }
+    .month-badge {
+        font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 600; color: #FFFFFF; background: var(--agco-red); padding: 0.18rem 0.55rem; border-radius: 5px; border: 1px solid var(--agco-red-dark); margin-left: 0.6rem; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .agco-divider { border: 0; height: 2px; background: linear-gradient(90deg, var(--agco-red) 0%, var(--agco-red) 30%, transparent 100%); margin-bottom: 0.7rem; }
+    .insights-section { margin-top: 2rem; }
+    .insights-container { display: grid; grid-template-columns: 3fr 7fr; gap: 1rem; align-items: start; }
+    .insight-summary-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem 1.2rem; box-shadow: var(--shadow-soft); }
+    .insight-summary-card h4, .insight-news-container h4 { font-size: 1rem; color: var(--text-heading); margin-bottom: 0.5rem; }
+    .insight-summary-card .summary-content { font-size: 0.85rem; line-height: 1.6; }
+    .summary-item { display: flex; align-items: center; gap: 0.7rem; }
+    .summary-item-icon { font-size: 1.2rem; line-height: 1; color: var(--text-heading); }
+    .summary-item-text { flex-grow: 1; }
+    .summary-item:not(:last-child) { margin-bottom: 0.6rem; }
+    .summary-item-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .summary-tag { display: inline-flex; align-items: center; gap: 0.4rem; background-color: var(--agco-gray); padding: 3px 8px; border-radius: 12px; font-size: 0.9em; margin-right: 0.5rem; margin-bottom: 0.3rem; }
+    .summary-tag-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .insight-summary-card .summary-content { font-size: 0.85rem; line-height: 1.6; }
+    .news-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; max-height: 400px; overflow-y: auto; padding-right: 8px; }
+    .news-grid::-webkit-scrollbar { width: 6px; }
+    .news-grid::-webkit-scrollbar-track { background: #f1f1f1; }
+    .news-grid::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+    .news-grid::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+    /* Destaque visual para o sentimento das notícias */
+    .news-card.positive-card { border-left: 4px solid var(--color-hp); }
+    .news-card.negative-card { border-left: 4px solid var(--color-hn); }
+    .news-card.neutral-card  { border-left: 4px solid var(--color-n); }
+
+    .news-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem 1rem; box-shadow: var(--shadow-soft); }
+    .news-card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+    .news-sentiment-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .news-card-header .news-title { flex-grow: 1; }
+    .news-sentiment-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .news-title { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--text-heading); }
+    .news-summary { margin: 0; font-size: 0.8rem; color: var(--text-muted); line-height: 1.5; }
+    .news-source-country { font-size: 0.7rem; font-weight: 700; color: #fff; background-color: #9ca3af; padding: 2px 6px; border-radius: 4px; margin-left: 8px; vertical-align: middle; }
+
+    .country-tabs-nav {
+        display: inline-flex; gap: 0.35rem; padding: 0.3rem; background: var(--agco-black); border-radius: 8px; margin-bottom: 0.75rem; box-shadow: var(--shadow-soft);
+    }
+    .country-tab-btn {
+        padding: 0.55rem 1.35rem; border-radius: 6px; border: none; background: transparent; color: #B8B8B8; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.25s ease; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .country-tab-btn:hover { color: #FFFFFF; }
+    .country-tab-btn.active, .country-tab-btn.active:focus, .country-tab-btn.active:active {
+        background: var(--agco-red) !important; color: #FFFFFF !important; box-shadow: 0 2px 6px rgba(200,16,46,0.35) !important;
+    }
+
+    .prod-tabs-container { display: flex; align-items: center; border-bottom: 2px solid var(--border-color); margin-bottom: 0.6rem; }
+    .country-title { font-size: 0.82rem; color: var(--text-muted); margin: 0; margin-right: 1.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .prod-tabs-nav { display: flex; gap: 1.5rem; }
+    .prod-tab-btn {
+        padding: 0.6rem 0; border: none; background: transparent; color: var(--text-muted); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.95rem; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: color 0.2s ease, border-color 0.2s ease; text-transform: uppercase;
+    }
+    .prod-tab-btn:hover { color: var(--agco-black); }
+    .prod-tab-btn.active, .prod-tab-btn.active:hover, .prod-tab-btn.active:focus, .prod-tab-btn.active:active {
+        color: var(--agco-black) !important; border-bottom-color: var(--agco-red) !important; background: transparent !important; outline: none !important; box-shadow: none !important;
+    }
+
+    .header-action-container { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.4rem; }
+    .elegant-btn { display: inline-flex; align-items: center; gap: 0.45rem; background-color: var(--card-bg); color: var(--text-heading); padding: 0.45rem 0.9rem; border-radius: 6px; border: 1px solid var(--border-color); font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow-soft); }
+    .elegant-btn:hover { background-color: var(--agco-red); color: #FFFFFF; transform: translateY(-1px); box-shadow: var(--shadow-hover); border-color: var(--agco-red); }
+    .elegant-btn svg { color: var(--text-body); transition: color 0.2s; }
+    .elegant-btn:hover svg { color: #FFFFFF; }
+
+    .elegant-card { background: var(--card-bg); border-radius: 10px; box-shadow: var(--shadow-soft); border: 1px solid var(--border-color); border-top: 3px solid var(--agco-red); overflow: hidden; margin-bottom: 0.75rem; }
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.83rem; }
+    th, td { padding: 0.7rem 1.1rem; text-align: left; vertical-align: middle; }
+    thead th { background-color: var(--agco-gray); color: var(--text-heading); font-family: 'Inter', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.72rem; }
+    tbody tr:hover { background-color: #FAFAFA; }
+
+    .country-tab-content { padding-top: 0.25rem; }
+    .prod-tab-content    { padding-top: 0.35rem; }
+    .prod-tab-content > *:first-child { margin-top: 0.2rem; }
+    hr { margin: 0.6rem 0; }
+
+    @media (max-width: 992px) {
+        .insights-container { grid-template-columns: 1fr; }
+    }
+    </style>
+</head>
+<body>
+
+    <div class="lang-controls">
+        <button class="lang-btn active" onclick="setLanguage('pt')">PT</button>
+        <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('es')">ES</button>
+    </div>
+
+    <!-- HEADER -->
+    <div class="dashboard-header">
+        <div class="header-title">
+            <h1>AGCO LATAM - Forecast Intelligence</h1>
+            <p><span data-i18n="updated">Atualizado</span>: 23/07/2026 | <span data-i18n="version">Versão</span>: 6+6</p>
+        </div>
+        <div class="kpi-container">
+            <div class="kpi-card info">
+                <div class="kpi-title" data-i18n="kpi_vol_title">Volume Total Projetado</div>
+                <div class="kpi-value" style="color: var(--agco-blue);">341.063</div>
+            </div>
+            <div class="kpi-card positive">
+                <div class="kpi-title" data-i18n="kpi_var_title">Variação de Volume</div>
+                <div class="kpi-value" style="color: {cor_texto};">+0.7% vs 5+7</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVEGAÇÃO DE PAÍSES -->
+    <div class="country-tabs-nav">
+        <button class="tab-btn country-tab-btn active" onclick="openCountry(event, 'BRA')">BRA</button><button class="tab-btn country-tab-btn " onclick="openCountry(event, 'ARG')">ARG</button><button class="tab-btn country-tab-btn " onclick="openCountry(event, 'MEX')">MEX</button><button class="tab-btn country-tab-btn " onclick="openCountry(event, 'OSA')">OSA</button>
+    </div>
+
+    <!-- CONTEÚDO DOS PAÍSES (INJETADO PELO PYTHON) -->
+    
+    <div id="BRA" class="country-tab-content active" style="display: block;">
+        <div class="prod-tabs-container">
+            <h2 class="country-title" data-i18n="select_prod">Selecione a Família de Produto:</h2>
+            <div class="prod-tabs-nav"><button class="prod-tab-btn active" onclick="openProduct(event, 'BRA_TA', 'BRA')">TA</button><button class="prod-tab-btn " onclick="openProduct(event, 'BRA_CO', 'BRA')">CO</button><button class="prod-tab-btn " onclick="openProduct(event, 'BRA_PA', 'BRA')">PA</button><button class="prod-tab-btn " onclick="openProduct(event, 'BRA_PU', 'BRA')">PU</button></div>
+        </div>
+        
+    <div id="BRA_TA" class="prod-tab-content active" style="display: block;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('BRA_TA', 'BRA_TA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_BRA_TA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">0-49HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,916</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,048</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">3,183</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">3,175</td><td class="num"><span class="negative" style="font-weight: 500;">-0.2%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,976</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,946</td><td class="num"><span class="negative" style="font-weight: 500;">-1.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">50-79HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">11,986</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">13,473</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">13,797</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">13,786</td><td class="num"><span class="negative" style="font-weight: 500;">-0.1%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">12,842</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">13,137</td><td class="num"><span class="positive" style="font-weight: 500;">+2.3%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">80-119HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">20,499</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">20,040</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">18,678</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">17,616</td><td class="num"><span class="negative" style="font-weight: 500;">-5.7%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">19,641</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">17,922</td><td class="num"><span class="negative" style="font-weight: 500;">-8.7%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">120-169HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,355</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,488</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">3,671</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">3,376</td><td class="num"><span class="negative" style="font-weight: 500;">-8.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">4,133</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">3,754</td><td class="num"><span class="negative" style="font-weight: 500;">-9.2%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">170-239HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,172</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,436</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,142</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,953</td><td class="num"><span class="negative" style="font-weight: 500;">-8.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,518</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,443</td><td class="num"><span class="negative" style="font-weight: 500;">-3.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">240-339HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,228</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,831</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,505</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,556</td><td class="num"><span class="positive" style="font-weight: 500;">+2.1%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,661</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,997</td><td class="num"><span class="positive" style="font-weight: 500;">+12.6%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">340 HP & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,334</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,194</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,120</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,139</td><td class="num"><span class="positive" style="font-weight: 500;">+1.7%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,245</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,290</td><td class="num"><span class="positive" style="font-weight: 500;">+3.6%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">47,490</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">46,510</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">45,095</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">43,602</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-3.3%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">46,017</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">44,491</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-3.3%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="BRA_CO" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('BRA_CO', 'BRA_CO')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_BRA_CO">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">Classe IV</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,028</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">764</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">705</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">554</td><td class="num"><span class="negative" style="font-weight: 500;">-21.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">727</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">637</td><td class="num"><span class="negative" style="font-weight: 500;">-12.4%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe V</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">858</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">653</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">523</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">226</td><td class="num"><span class="negative" style="font-weight: 500;">-56.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">686</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">6</td><td class="num"><span class="negative" style="font-weight: 500;">-99.1%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VI</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">483</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">397</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">382</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">381</td><td class="num"><span class="negative" style="font-weight: 500;">-0.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">493</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">497</td><td class="num"><span class="positive" style="font-weight: 500;">+0.8%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VII</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">821</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">723</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">548</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">633</td><td class="num"><span class="positive" style="font-weight: 500;">+15.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">613</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">760</td><td class="num"><span class="positive" style="font-weight: 500;">+24.1%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VIII & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,076</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,005</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">848</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">914</td><td class="num"><span class="positive" style="font-weight: 500;">+7.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">941</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,104</td><td class="num"><span class="positive" style="font-weight: 500;">+17.4%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,266</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,542</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">3,006</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">2,708</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-9.9%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">3,459</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">3,005</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-13.1%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="BRA_PA" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('BRA_PA', 'BRA_PA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_BRA_PA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">0 < 20 linhas</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">3,480</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,650</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,467</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,318</td><td class="num"><span class="negative" style="font-weight: 500;">-6.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,799</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,813</td><td class="num"><span class="positive" style="font-weight: 500;">+0.5%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">20 linhas ou +</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,286</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,048</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,608</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,917</td><td class="num"><span class="positive" style="font-weight: 500;">+19.2%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,803</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,226</td><td class="num"><span class="positive" style="font-weight: 500;">+23.5%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">5,766</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,698</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">4,075</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">4,235</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+3.9%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">4,601</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">5,039</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+9.5%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="BRA_PU" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('BRA_PU', 'BRA_PU')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_BRA_PU">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">All</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,169</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,986</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,793</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">3,067</td><td class="num"><span class="positive" style="font-weight: 500;">+9.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,883</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">3,303</td><td class="num"><span class="positive" style="font-weight: 500;">+14.6%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,169</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,986</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">2,793</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">3,067</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+9.8%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">2,883</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">3,303</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+14.6%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+        
+    <div class="insights-section">
+        <hr class="agco-divider">
+        <h3 class="section-title">
+            Insights Agribusiness
+            <span class="month-badge">Julho de 2026</span>
+        </h3>
+        <div class="insights-container">
+            <div class="insight-summary-card">
+                <h4>Cenário Geral do Mercado</h4>
+                <div class="summary-content"><div class="summary-item positive"><span class="summary-item-icon">💳</span><div class="summary-item-text"><strong>Crédito Rural:</strong> Novo Plano Safra 2026/27 anunciado com aumento de recursos e taxas competitivas para pequenos produtores.</div><span class="summary-sentiment-badge positive" data-i18n="positivo">Positivo</span></div><div class="summary-item neutral"><span class="summary-item-icon">💰</span><div class="summary-item-text"><strong>Juros (Selic):</strong> Taxa Selic mantida em patamar estável após série de cortes, aguardando sinais de inflação.</div><span class="summary-sentiment-badge neutral" data-i18n="neutro">Neutro</span></div><div class="summary-item neutral"><span class="summary-item-icon">💵</span><div class="summary-item-text"><strong>Câmbio (Dólar):</strong> Dólar volátil, com tendências de valorização frente ao real devido a cenário fiscal e eleições.</div><span class="summary-sentiment-badge neutral" data-i18n="incerto">Incerto</span></div><div class="summary-item negative"><span class="summary-item-icon">🚜</span><div class="summary-item-text"><strong>Prod. Grãos:</strong> Estimativa de safra recorde de milho safrinha e boas perspectivas para o plantio de verão.</div><span class="summary-sentiment-badge negative" data-i18n="negativo">Negativo</span></div><div class="summary-item neutral"><span class="summary-item-icon">📊</span><div class="summary-item-text"><strong>Margens Produtor:</strong> Margens de soja e milho apertadas; café e cana com margens melhores.</div><span class="summary-sentiment-badge neutral" data-i18n="incerto">Incerto</span></div></div>
+            </div>
+            <div class="insight-news-container">
+                <h4>Notícias Relevantes</h4>
+                <div class="news-grid">
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Preços da Soja em Alta com Demanda Chinesa Robusta</h5>
+                </div>
+                <p class="news-summary">A demanda contínua da China por soja brasileira impulsionou os preços no mercado internacional, animando produtores para a próxima safra. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Milho Safrinha Supera Expectativas: Colheita Acelerada</h5>
+                </div>
+                <p class="news-summary">A colheita do milho safrinha avança rapidamente, superando as projeções iniciais de produtividade em diversas regiões do Centro-Oeste. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Preços do Café Disparam com Geadas no Sul de Minas</h5>
+                </div>
+                <p class="news-summary">Geada surpreende cafeicultores no sul de Minas Gerais, gerando preocupações com a oferta futura e elevando os preços no mercado. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Safra de Cana de Açúcar Avanca com Bom Ritmo e Qualidade</h5>
+                </div>
+                <p class="news-summary">A moagem da cana-de-açúcar está em pleno vapor, com produtividade e qualidade acima da média, impulsionando a produção de açúcar e etanol. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Mercado do Algodão Firme com Exportações Crescentes</h5>
+                </div>
+                <p class="news-summary">O mercado do algodão brasileiro mantém-se aquecido, com forte demanda internacional e bons preços, garantindo rentabilidade aos produtores. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Plantio de Trigo no Sul do Brasil Avança com Clima Favorável</h5>
+                </div>
+                <p class="news-summary">O plantio de trigo no Sul do país progrediu bem em julho, impulsionado por condições climáticas ideais, com expectativa de boa safra. </p>
+            </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+    <div id="ARG" class="country-tab-content " style="display: none;">
+        <div class="prod-tabs-container">
+            <h2 class="country-title" data-i18n="select_prod">Selecione a Família de Produto:</h2>
+            <div class="prod-tabs-nav"><button class="prod-tab-btn active" onclick="openProduct(event, 'ARG_TA', 'ARG')">TA</button><button class="prod-tab-btn " onclick="openProduct(event, 'ARG_CO', 'ARG')">CO</button><button class="prod-tab-btn " onclick="openProduct(event, 'ARG_PU', 'ARG')">PU</button></div>
+        </div>
+        
+    <div id="ARG_TA" class="prod-tab-content active" style="display: block;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('ARG_TA', 'ARG_TA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_ARG_TA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">0-49HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">165</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">331</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">196</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">188</td><td class="num"><span class="negative" style="font-weight: 500;">-3.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">287</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">287</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">50-79HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">728</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">679</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">647</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">632</td><td class="num"><span class="negative" style="font-weight: 500;">-2.2%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">662</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">662</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">80-119HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,308</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,250</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,165</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,078</td><td class="num"><span class="negative" style="font-weight: 500;">-7.4%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,306</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,223</td><td class="num"><span class="negative" style="font-weight: 500;">-6.4%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">120-169HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,023</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,126</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">982</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,038</td><td class="num"><span class="positive" style="font-weight: 500;">+5.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">984</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,025</td><td class="num"><span class="positive" style="font-weight: 500;">+4.2%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">170-239HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,340</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,185</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,155</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,083</td><td class="num"><span class="negative" style="font-weight: 500;">-6.2%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,217</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,235</td><td class="num"><span class="positive" style="font-weight: 500;">+1.5%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">240-339HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">792</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">833</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">570</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">671</td><td class="num"><span class="positive" style="font-weight: 500;">+17.7%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">454</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">659</td><td class="num"><span class="positive" style="font-weight: 500;">+45.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">340 HP & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">136</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">111</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">108</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">88</td><td class="num"><span class="negative" style="font-weight: 500;">-18.1%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">111</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">84</td><td class="num"><span class="negative" style="font-weight: 500;">-24.1%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">5,492</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">5,515</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">4,821</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">4,780</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-0.9%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">5,022</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">5,176</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+3.1%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="ARG_CO" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('ARG_CO', 'ARG_CO')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_ARG_CO">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">Classe IV & V</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">135</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">150</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">131</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">129</td><td class="num"><span class="negative" style="font-weight: 500;">-1.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">132</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">136</td><td class="num"><span class="positive" style="font-weight: 500;">+3.2%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VI</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">98</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">134</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">116</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">119</td><td class="num"><span class="positive" style="font-weight: 500;">+2.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">118</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">123</td><td class="num"><span class="positive" style="font-weight: 500;">+4.4%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VII</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">298</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">352</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">168</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">142</td><td class="num"><span class="negative" style="font-weight: 500;">-15.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">314</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">294</td><td class="num"><span class="negative" style="font-weight: 500;">-6.2%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VIII & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">116</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">188</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">165</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">180</td><td class="num"><span class="positive" style="font-weight: 500;">+9.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">128</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">134</td><td class="num"><span class="positive" style="font-weight: 500;">+4.4%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">647</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">824</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">580</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">570</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-1.7%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">692</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">687</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-0.7%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="ARG_PU" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('ARG_PU', 'ARG_PU')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_ARG_PU">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">All</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">851</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">937</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">593</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">644</td><td class="num"><span class="positive" style="font-weight: 500;">+8.6%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">736</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">860</td><td class="num"><span class="positive" style="font-weight: 500;">+16.9%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">851</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">937</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">593</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">644</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+8.6%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">736</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">860</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+16.9%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+        
+    <div class="insights-section">
+        <hr class="agco-divider">
+        <h3 class="section-title">
+            Insights Agribusiness
+            <span class="month-badge">Julho de 2026</span>
+        </h3>
+        <div class="insights-container">
+            <div class="insight-summary-card">
+                <h4>Cenário Geral do Mercado</h4>
+                <div class="summary-content"><div class="summary-item negative"><span class="summary-item-icon">💳</span><div class="summary-item-text"><strong>Crédito/Financ.:</strong> Acesso ao crédito rural continua limitado, com altas taxas de juros e exigências rigorosas.</div><span class="summary-sentiment-badge negative" data-i18n="negativo">Negativo</span></div><div class="summary-item neutral"><span class="summary-item-icon">📈</span><div class="summary-item-text"><strong>Inflação/Câmbio:</strong> Inflação ainda elevada, mas com sinais de moderação. Câmbio sob pressão de desvalorização gradual.</div><span class="summary-sentiment-badge neutral" data-i18n="incerto">Incerto</span></div><div class="summary-item neutral"><span class="summary-item-icon">⚖️</span><div class="summary-item-text"><strong>Retenciones:</strong> Política de 'retenciones' sobre exportações agrícolas mantida, sem grandes alterações.</div><span class="summary-sentiment-badge neutral" data-i18n="neutro">Neutro</span></div><div class="summary-item negative"><span class="summary-item-icon">🚜</span><div class="summary-item-text"><strong>Prod. Agrícola:</strong> Perspectivas positivas para a safra de grãos finos (trigo) e preparo para o plantio de verão.</div><span class="summary-sentiment-badge negative" data-i18n="negativo">Negativo</span></div><div class="summary-item negative"><span class="summary-item-icon">📊</span><div class="summary-item-text"><strong>Margens Produtor:</strong> Margens de soja e milho fortemente comprimidas por custos e retenções; trigo mostra leve melhora.</div><span class="summary-sentiment-badge negative" data-i18n="negativo">Negativo</span></div></div>
+            </div>
+            <div class="insight-news-container">
+                <h4>Notícias Relevantes</h4>
+                <div class="news-grid">
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Trigo Argentino: Plantio Avança com Clima Favorável</h5>
+                </div>
+                <p class="news-summary">O plantio de trigo na Argentina avança em bom ritmo, impulsionado por chuvas adequadas e condições favoráveis, com expectativa de boa safra. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Pecuária Argentina Busca Novos Mercados para Carne</h5>
+                </div>
+                <p class="news-summary">Setor pecuário argentino intensifica esforços para abrir novos mercados exportadores de carne bovina, visando diversificar destinos e aumentar receita. </p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Queda no Preço Internacional da Soja Preocupa Produtores</h5>
+                </div>
+                <p class="news-summary">A baixa nos preços globais da soja, combinada com as retenções, acende o alerta para a rentabilidade da próxima safra argentina. </p>
+            </div>
+            
+            <div class="news-card neutral-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-n);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-n);" data-i18n="incerto">Incerto</span>
+                    <h5 class="news-title">Seca Afeta Reservatórios e Prepara Plantio de Milho</h5>
+                </div>
+                <p class="news-summary">Algumas regiões começam o período de preparo do solo para o milho com reservatórios em níveis baixos, gerando apreensão sobre o plantio. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Investimento em Bioenergia Ganha Impulso no Norte Argentino</h5>
+                </div>
+                <p class="news-summary">Projetos de bioenergia, focados em biomassa e culturas energéticas, recebem novos investimentos na região norte da Argentina. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Financiamento de Máquinas Agrícolas com Novas Linhas de Crédito</h5>
+                </div>
+                <p class="news-summary">Bancos anunciam novas linhas de crédito para máquinas agrícolas, buscando reativar o setor e apoiar a modernização do campo. </p>
+            </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+    <div id="MEX" class="country-tab-content " style="display: none;">
+        <div class="prod-tabs-container">
+            <h2 class="country-title" data-i18n="select_prod">Selecione a Família de Produto:</h2>
+            <div class="prod-tabs-nav"><button class="prod-tab-btn active" onclick="openProduct(event, 'MEX_TA', 'MEX')">TA</button></div>
+        </div>
+        
+    <div id="MEX_TA" class="prod-tab-content active" style="display: block;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('MEX_TA', 'MEX_TA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_MEX_TA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">0-49HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,160</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">894</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">769</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">861</td><td class="num"><span class="positive" style="font-weight: 500;">+12.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">899</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,165</td><td class="num"><span class="positive" style="font-weight: 500;">+29.5%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">50-79HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,643</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">2,751</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,551</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,840</td><td class="num"><span class="positive" style="font-weight: 500;">+11.4%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">2,684</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">2,684</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">80-119HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">5,886</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">5,741</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">5,021</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">5,387</td><td class="num"><span class="positive" style="font-weight: 500;">+7.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">5,461</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">5,481</td><td class="num"><span class="positive" style="font-weight: 500;">+0.4%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">120-169HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,434</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,047</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,046</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,096</td><td class="num"><span class="positive" style="font-weight: 500;">+4.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,272</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,294</td><td class="num"><span class="positive" style="font-weight: 500;">+1.7%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">170-239HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">101</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">211</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">168</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">180</td><td class="num"><span class="positive" style="font-weight: 500;">+7.4%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">178</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">181</td><td class="num"><span class="positive" style="font-weight: 500;">+1.6%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">240-339HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">121</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">88</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">75</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">74</td><td class="num"><span class="negative" style="font-weight: 500;">-2.1%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">100</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">100</td><td class="num"><span class="negative" style="font-weight: 500;">-0.1%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">340 HP & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">36</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">17</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">24</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">29</td><td class="num"><span class="positive" style="font-weight: 500;">+21.9%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">16</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">15</td><td class="num"><span class="negative" style="font-weight: 500;">-4.4%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">11,381</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">10,749</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">9,653</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">10,468</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+8.4%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">10,610</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">10,920</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+2.9%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+        
+    <div class="insights-section">
+        <hr class="agco-divider">
+        <h3 class="section-title">
+            Insights Agribusiness
+            <span class="month-badge">Julho de 2026</span>
+        </h3>
+        <div class="insights-container">
+            <div class="insight-summary-card">
+                <h4>Cenário Geral do Mercado</h4>
+                <div class="summary-content"><div class="summary-item positive"><span class="summary-item-icon">🥑</span><div class="summary-item-text"><strong>Export. p/ EUA:</strong> Exportações agrícolas para os EUA, especialmente frutas e vegetais, continuam em forte crescimento.</div><span class="summary-sentiment-badge positive" data-i18n="positivo">Positivo</span></div><div class="summary-item negative"><span class="summary-item-icon">🏜️</span><div class="summary-item-text"><strong>Escassez Hídrica:</strong> Diversas regiões agrícolas enfrentam escassez hídrica severa, impactando culturas chave.</div><span class="summary-sentiment-badge negative" data-i18n="negativo">Negativo</span></div><div class="summary-item neutral"><span class="summary-item-icon">🌵</span><div class="summary-item-text"><strong>Prod. Agave:</strong> Produção de agave para tequila e mezcal mantém-se estável, com demanda internacional firme.</div><span class="summary-sentiment-badge neutral" data-i18n="neutro">Neutro</span></div><div class="summary-item positive"><span class="summary-item-icon">👨‍👩‍👧‍👦</span><div class="summary-item-text"><strong>Remessas/Agro Fam.:</strong> Remessas de mexicanos no exterior fortalecem a agricultura familiar e pequenos produtores.</div><span class="summary-sentiment-badge positive" data-i18n="positivo">Positivo</span></div><div class="summary-item neutral"><span class="summary-item-icon">📊</span><div class="summary-item-text"><strong>Margens Produtor:</strong> Margens de hortaliças para exportação são boas; milho e feijão enfrentam pressão de custos.</div><span class="summary-sentiment-badge neutral" data-i18n="incerto">Incerto</span></div></div>
+            </div>
+            <div class="insight-news-container">
+                <h4>Notícias Relevantes</h4>
+                <div class="news-grid">
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Exportações de Abacate Mexicano para EUA Continuam em Alta</h5>
+                </div>
+                <p class="news-summary">A demanda por abacates mexicanos nos Estados Unidos permanece robusta, impulsionando a produção e gerando lucros significativos para os produtores. </p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Seca Ameaça Culturas de Milho e Feijão em Regiões Centrais</h5>
+                </div>
+                <p class="news-summary">A persistente seca em estados centrais do México está afetando seriamente as culturas de milho e feijão, essenciais para a segurança alimentar do país. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Remessas Ajudam Agricultura Familiar a Adquirir Equipamentos</h5>
+                </div>
+                <p class="news-summary">O fluxo de remessas de mexicanos no exterior tem sido crucial para que a agricultura familiar possa investir em pequenas máquinas e modernizar suas operações no campo. </p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Setor do Agave Busca Modernização para Aumentar Eficiência</h5>
+                </div>
+                <p class="news-summary">Produtores de agave, impulsionados pela demanda global por tequila e mezcal, investem em tecnologias para otimizar o cultivo e a colheita, visando maior eficiência. </p>
+            </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+    <div id="OSA" class="country-tab-content " style="display: none;">
+        <div class="prod-tabs-container">
+            <h2 class="country-title" data-i18n="select_prod">Selecione a Família de Produto:</h2>
+            <div class="prod-tabs-nav"><button class="prod-tab-btn active" onclick="openProduct(event, 'OSA_TA', 'OSA')">TA</button><button class="prod-tab-btn " onclick="openProduct(event, 'OSA_CO', 'OSA')">CO</button><button class="prod-tab-btn " onclick="openProduct(event, 'OSA_PA', 'OSA')">PA</button><button class="prod-tab-btn " onclick="openProduct(event, 'OSA_PU', 'OSA')">PU</button></div>
+        </div>
+        
+    <div id="OSA_TA" class="prod-tab-content active" style="display: block;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('OSA_TA', 'OSA_TA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_OSA_TA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">0-49HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">323</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">380</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">311</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">405</td><td class="num"><span class="positive" style="font-weight: 500;">+30.2%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">364</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">397</td><td class="num"><span class="positive" style="font-weight: 500;">+9.1%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">50-79HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,333</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,349</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,327</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,749</td><td class="num"><span class="positive" style="font-weight: 500;">+31.8%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,202</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,467</td><td class="num"><span class="positive" style="font-weight: 500;">+22.1%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">80-119HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,261</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">4,626</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">4,461</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">5,011</td><td class="num"><span class="positive" style="font-weight: 500;">+12.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">3,628</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">4,667</td><td class="num"><span class="positive" style="font-weight: 500;">+28.7%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">120-169HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,399</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,415</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,459</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,645</td><td class="num"><span class="positive" style="font-weight: 500;">+12.7%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">1,047</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">1,366</td><td class="num"><span class="positive" style="font-weight: 500;">+30.5%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">170-239HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">946</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">917</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">821</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">916</td><td class="num"><span class="positive" style="font-weight: 500;">+11.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">609</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">882</td><td class="num"><span class="positive" style="font-weight: 500;">+45.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">240-339HP</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">109</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">119</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">104</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">107</td><td class="num"><span class="positive" style="font-weight: 500;">+3.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">81</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">129</td><td class="num"><span class="positive" style="font-weight: 500;">+59.7%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">340 HP & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">62</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">53</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">47</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">51</td><td class="num"><span class="positive" style="font-weight: 500;">+8.4%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">41</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">48</td><td class="num"><span class="positive" style="font-weight: 500;">+17.8%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">8,433</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">8,859</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">8,531</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">9,883</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+15.9%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">6,971</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">8,957</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+28.5%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="OSA_CO" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('OSA_CO', 'OSA_CO')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_OSA_CO">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">Classe IV</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">31</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">28</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">7</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">7</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">31</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">31</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe V</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">58</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">41</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">31</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">31</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">17</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">17</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VI</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">56</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">48</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">45</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">45</td><td class="num"><span class="positive" style="font-weight: 500;">+0.9%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">68</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">64</td><td class="num"><span class="negative" style="font-weight: 500;">-5.9%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VII</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">31</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">33</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">39</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">39</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">42</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">42</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">Classe VIII & Over</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">62</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">52</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">47</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">51</td><td class="num"><span class="positive" style="font-weight: 500;">+8.6%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">52</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">52</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">238</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">202</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">168</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">173</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+2.6%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">211</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">207</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-1.9%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="OSA_PA" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('OSA_PA', 'OSA_PA')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_OSA_PA">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">All</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">0</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">0</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">903</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">906</td><td class="num"><span class="positive" style="font-weight: 500;">+0.3%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">904</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">904</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr><tr><td style="font-weight: 600; color: #334155;">20 linhas ou +</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,293</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">900</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">0</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">0</td><td class="num">-</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">0</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">0</td><td class="num">-</td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">1,293</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">900</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">903</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">906</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">+0.3%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">904</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">904</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">0.0%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+    <div id="OSA_PU" class="prod-tab-content " style="display: none;">
+        
+        <div class="header-action-container">
+            <h3 class="section-title" data-i18n="proj_vol">Projeção de Volumes</h3>
+            <button class="btn-excel elegant-btn" onclick="exportProdExcel('OSA_PU', 'OSA_PU')">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <span data-i18n="export">Exportar para Excel</span>
+            </button>
+        </div>
+        <div class="table-container elegant-card">
+            <table id="table_OSA_PU">
+                <thead><tr><th rowspan="2" style="width: 15%; border-bottom: 1px solid #e2e8f0; color: #1e293b;" data-i18n="seg">🚜 Segmento</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2024</th><th style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2025</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2026</th><th colspan="3" style="text-align: center; border-bottom: 1px solid #e2e8f0; color: #1e293b; font-size: 13px; font-weight: 600;">2027</th></tr><tr><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; border-bottom: 1px solid #e2e8f0;" data-i18n="realized">Realizado</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;">5+7</th><th style="text-align: center; font-size: 11px; color: #0f172a; font-weight: 600; width: 10%; border-bottom: 1px solid #e2e8f0;">6+6</th><th style="text-align: center; font-size: 11px; color: #64748b; font-weight: 500; width: 10%; border-bottom: 1px solid #e2e8f0;" data-i18n="var_cycle">Var. Ciclo</th></tr></thead>
+                <tbody><tr><td style="font-weight: 600; color: #334155;">All</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">190</td><td class="num" style="font-weight: 500; color: #334155; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">215</td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">183</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">154</td><td class="num"><span class="negative" style="font-weight: 500;">-15.5%</span></td><td class="num" style="color: #94a3b8; border-left: 1px dashed #e2e8f0;">172</td><td class="num" style="font-weight: 500; color: #0f172a; background-color: #f8fafc;">172</td><td class="num"><span class="positive" style="font-weight: 500;">0.0%</span></td></tr></tbody>
+                <tfoot><tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1;"><td style="text-align: left; font-weight: 700; color: #0f172a; text-transform: uppercase;" data-i18n="total">Total:</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">190</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc; border-left: 1px dashed #e2e8f0;">215</td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">183</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">154</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="negative">-15.5%</span></td><td class="num" style="color: #64748b; font-size: 1em; border-left: 1px dashed #e2e8f0;">172</td><td class="num" style="font-weight: 700; font-size: 1.05em; color: #0f172a; background-color: #f8fafc;">172</td><td class="num" style="font-weight: 700; font-size: 1em;"><span class="positive">0.0%</span></td></tr></tfoot>
+            </table>
+        </div>
+    
+    </div>
+    
+        
+    <div class="insights-section">
+        <hr class="agco-divider">
+        <h3 class="section-title">
+            Insights Agribusiness
+            <span class="month-badge">Julho de 2026</span>
+        </h3>
+        <div class="insights-container">
+            <div class="insight-summary-card">
+                <h4>Cenário Geral do Mercado</h4>
+                <div class="summary-content"><ul><li><strong>CHILE:</strong> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Cenário Hídrico</span> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Custo de Insumos</span> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Reg. Ambiental</span></li><li><strong>URUGUAI:</strong> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Preço Commod.</span> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Atraso Cambial</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Prod. Florestal</span> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Margens Produtor</span></li><li><strong>PARAGUAI:</strong> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Expansão Agro</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Logística Fluvial</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Prod. Carne</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Margens Produtor</span></li><li><strong>PERU:</strong> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Agroexport (Costa)</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Irrigação</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Margens Produtor</span></li><li><strong>BOLIVIA:</strong> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Soja (Oriente)</span> <span class="summary-tag negative"><span class="summary-tag-dot"></span> Escassez de Dólar</span> <span class="summary-tag positive"><span class="summary-tag-dot"></span> Biocombustíveis</span></li></ul></div>
+            </div>
+            <div class="insight-news-container">
+                <h4>Notícias Relevantes</h4>
+                <div class="news-grid">
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Crise Hídrica Ameaça Safra de Frutas no Norte do Chile</h5>
+                </div>
+                <p class="news-summary">A prolongada seca no centro-norte do Chile está causando perdas significativas na fruticultura, com produtores enfrentando restrições de água e menores rendimentos. <span class="news-source-country">CHILE</span></p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Preço do Vinho Chileno Enfrenta Pressão em Mercados Globais</h5>
+                </div>
+                <p class="news-summary">A indústria do vinho chileno enfrenta desafios com a queda nos preços internacionais e a concorrência, impactando a rentabilidade dos vinhedos. <span class="news-source-country">CHILE</span></p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Preços da Soja em Queda Impactam Produtores Uruguaio</h5>
+                </div>
+                <p class="news-summary">A desvalorização dos preços internacionais da soja está afetando diretamente a rentabilidade dos agricultores uruguaios, gerando preocupação para a próxima safra. <span class="news-source-country">URUGUAI</span></p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Dólar Baixo Impacta Competitividade de Exportadores</h5>
+                </div>
+                <p class="news-summary">O peso uruguaio valorizado frente ao dólar está prejudicando a rentabilidade de exportadores de grãos e carne, que recebem menos em moeda local. <span class="news-source-country">URUGUAI</span></p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Mudanças Climáticas Afetam Cafeicultores na Selva Peruana</h5>
+                </div>
+                <p class="news-summary">A variabilidade climática, com secas e chuvas intensas, está desafiando os produtores de café na selva peruana, impactando a qualidade e quantidade da colheita. <span class="news-source-country">PERU</span></p>
+            </div>
+            
+            <div class="news-card negative-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hn);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hn);" data-i18n="negativo">Negativo</span>
+                    <h5 class="news-title">Crise de Dólares Dificulta Importação de Máquinas Agrícolas</h5>
+                </div>
+                <p class="news-summary">A persistente escassez de dólares na Bolívia está criando barreiras para a importação de novas máquinas agrícolas, afetando a modernização do campo e o custo de manutenção. <span class="news-source-country">BOLIVIA</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Demanda por Mirtilos Chilenos Cresce na Ásia</h5>
+                </div>
+                <p class="news-summary">As exportações de mirtilos chilenos para mercados asiáticos registram alta, impulsionadas pela qualidade e acordos comerciais favoráveis. <span class="news-source-country">CHILE</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Novas Tecnologias de Irrigação Essenciais para Agricultura Chilena</h5>
+                </div>
+                <p class="news-summary">Investimentos em tecnologias de irrigação eficiente são cruciais para a sustentabilidade da agricultura chilena frente à escassez de água. <span class="news-source-country">CHILE</span></p>
+            </div>
+            
+            <div class="news-card neutral-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-n);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-n);" data-i18n="estavel">estavel</span>
+                    <h5 class="news-title">Pecuária Uruguaia: Exportações de Carne Mantêm Ritmo</h5>
+                </div>
+                <p class="news-summary">As exportações de carne bovina do Uruguai seguem fortes, impulsionadas pela demanda consistente da China e outros mercados. Preços firmes. <span class="news-source-country">URUGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Setor Florestal Uruguai Recebe Novos Investimentos Estrangeiros</h5>
+                </div>
+                <p class="news-summary">Empresas estrangeiras anunciam investimentos em novas plantas de celulose e reflorestamento no Uruguai, impulsionando a cadeia produtiva. <span class="news-source-country">URUGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Soja Paraguai: Colheita Recorde Impulsiona Exportações</h5>
+                </div>
+                <p class="news-summary">O Paraguai registra uma safra histórica de soja, com volumes recordes sendo escoados para exportação, gerando alta receita para o setor agrícola. <span class="news-source-country">PARAGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Investimento em Infraestrutura da Hidrovia Melhora Escoamento</h5>
+                </div>
+                <p class="news-summary">Novos projetos de infraestrutura na Hidrovia Paraguai-Paraná prometem otimizar o transporte de grãos e baratear o custo logístico para os produtores. <span class="news-source-country">PARAGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Pecuária Paraguaia Expande Rebanho e Exportações de Carne</h5>
+                </div>
+                <p class="news-summary">O setor pecuário paraguaio continua seu crescimento robusto, com aumento do rebanho e diversificação dos mercados exportadores para carne bovina. <span class="news-source-country">PARAGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Governo Impulsiona Crédito para Pequenos Agricultores</h5>
+                </div>
+                <p class="news-summary">Novas linhas de crédito com juros subsidiados são lançadas pelo governo para apoiar pequenos agricultores e fomentar a produção familiar. <span class="news-source-country">PARAGUAI</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Agroexportação Peruana Bate Recorde no Primeiro Semestre</h5>
+                </div>
+                <p class="news-summary">As exportações agrícolas do Peru atingiram um novo recorde no primeiro semestre de 2026, com frutas como abacate e uva liderando o crescimento. Demanda forte. <span class="news-source-country">PERU</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Novos Projetos de Irrigação Aumentam Área Cultivável na Costa</h5>
+                </div>
+                <p class="news-summary">Grandes projetos de irrigação em La Libertad e Piura estão expandindo significativamente a área disponível para a agricultura de exportação, atraindo investimentos. <span class="news-source-country">PERU</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Produtores Andinos Buscam Tecnologia para Aumentar Produtividade</h5>
+                </div>
+                <p class="news-summary">Em regiões andinas, pequenos produtores estão buscando máquinas mais eficientes e adaptadas para melhorar a produtividade de culturas tradicionais como batata e quinua. <span class="news-source-country">PERU</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Bolívia Projeta Safra Recorde de Soja no Leste do País</h5>
+                </div>
+                <p class="news-summary">Com condições climáticas favoráveis e aumento da área plantada, as previsões para a safra de soja no oriente boliviano indicam um volume recorde. Otimismo no setor. <span class="news-source-country">BOLIVIA</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Governo Impulsiona Produção de Biocombustíveis com Soja</h5>
+                </div>
+                <p class="news-summary">Um novo pacote de incentivos governamentais visa fortalecer a produção de biocombustíveis na Bolívia, aumentando a demanda por soja e girassol como matéria-prima. <span class="news-source-country">BOLIVIA</span></p>
+            </div>
+            
+            <div class="news-card positive-card">
+                <div class="news-card-header">
+                    <span class="news-sentiment-dot" style="background-color: var(--color-hp);"></span>
+                    <span class="news-sentiment-label" style="color: var(--color-hp);" data-i18n="positivo">Positivo</span>
+                    <h5 class="news-title">Investimentos em Rodovias Visam Melhorar Escoamento Agrícola</h5>
+                </div>
+                <p class="news-summary">Obras em trechos rodoviários estratégicos no leste boliviano prometem otimizar o escoamento da produção agrícola e reduzir custos de transporte para os agricultores. <span class="news-source-country">BOLIVIA</span></p>
+            </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    </div>
+
+    <script>
+        // --- DADOS INJETADOS PELO PYTHON ---
+        const translations = {"pt": {"realized": "Realizado", "var_cycle": "Var. Ciclo", "seg": "🚜 Segmento", "total": "Total:", "legend_title": "Legenda de Impacto:", "legend_hp": "Alto Positivo", "legend_mp": "Médio Positivo", "legend_n": "Neutro", "legend_mn": "Médio Negativo", "legend_hn": "Alto Negativo", "matrix_title": "Matriz de Impacto e Drivers", "matrix": "Matriz de Impacto e Drivers", "driver_status_title": "Direcionamento de Mercado", "proj_vol": "Projeção de Volumes", "export": "Exportar para Excel", "version": "Versão", "updated": "Atualizado", "select_prod": "Selecione a Família de Produto:", "month": "Mês", "current_forecast": "Atual Forecast", "kpi_model_title": "Algoritmo de Projeção", "kpi_model_desc": "Machine Learning Pipeline", "kpi_vol_title": "Volume Total Projetado (LATAM)", "kpi_vol_desc": "Ciclo", "kpi_var_title": "Variação de Volume", "kpi_var_desc": "Impacto Geral", "positive": "Positivo", "critical": "Crítico", "warning": "Atenção", "positivo": "Positivo", "negativo": "Negativo", "neutro": "Neutro", "incerto": "Incerto", "jan": "Janeiro", "feb": "Fevereiro", "mar": "Março", "apr": "Abril", "may": "Maio", "jun": "Junho", "jul": "Julho", "aug": "Agosto", "sep": "Setembro", "oct": "Outubro", "nov": "Novembro", "dec": "Dezembro", "current": "Atual", "soja": "Soja", "milho": "Milho", "algodao": "Algodão", "acucar": "Cana", "cafe": "Café", "frutas": "Frutas", "trigo": "Trigo", "arroz": "Arroz", "horticultura": "Horticultura", "pecuaria": "Pecuária", "sorgo": "Sorgo", "amendoim": "Amendoim", "graos_forrageiros": "Grãos Forrageiros", "milho_branco": "Milho Branco", "agave": "Agave", "avocado": "Avocado", "pronaf": "Disponibilidade PRONAF", "juros_varejo": "Taxa de Juros (Varejo)", "margem_pecuaria": "Margem da Pecuária", "custo_racao": "Custo da Ração", "credito_geral": "Crédito Rural", "clima_sul": "Clima (Sul/Sudeste)", "moderfrota": "Taxas Moderfrota", "rentabilidade": "Rentabilidade da Safra", "expansao_area": "Expansão de Área", "diesel": "Preço do Diesel", "dolar_alto": "Dólar Alto (Exportação)", "juros_altos": "Juros Altos", "pronamp": "Disponibilidade PRONAMP", "quebra_safra": "Quebra de Safra", "safra_recorde": "Safra Recorde", "janela_colheita": "Janela Curta (Pressão)", "cambio_forte": "Câmbio Desfavorável", "barter": "Fomento Barter", "margem_corp": "Queda Margem Corporativa", "rotacao_inv": "Rotação Culturas Inverno", "janela_clima": "Janela Climática Curta", "estagnacao_area": "Estagnação de Área", "pressao_clima": "Alta Pressão Climática", "inflacao_defensivos": "Inflação Defensivos", "subsidios_pesos": "Subsídios em Pesos", "juros_comerciais": "Juros Comerciais Elevados", "margem_boi": "Margem Boi Gordo", "seca_severa": "Seca Severa", "credito_nacional": "Crédito Industrial Nacional", "retenciones": "Aumento Retenciones", "tarifa_contratista": "Tarifa Contratista", "pecas_importadas": "Encarecimento Peças Imp.", "brecha_cambial": "Aumento Brecha Cambial", "escassez_graos": "Escassez Grãos (Canje)", "dolar_soja": "Janelas Dólar Soja", "restricao_imp": "Restrição de Importações", "liberacao_divisas": "Liberação de Divisas", "preco_cbot": "Queda Preço Int. (CBOT)", "subsidio_ind": "Subsídio Indústria Nac.", "corte_gastos": "Corte de Crédito Público", "seca_lanina": "Seca La Niña", "preco_fob": "Preço FOB Rosário", "greves_portos": "Greves Portuárias", "dolar_oficial": "Acesso Dólar Oficial", "desinvestimento": "Desinvestimento Mega Pools", "liquidez_imediata": "Liquidez Imediata", "custo_insumos": "Alta Custo Insumos", "pacotes_tec": "Pacotes Traders", "restricao_dolares": "Restrição Dólares Corp.", "quimicos_dolar": "Químicos em Dólar", "remessas_eua": "Remessas dos EUA", "corte_programas": "Corte Programas Federais", "peso_valorizado": "Peso Valorizado", "inflacao_pecas": "Inflação de Peças", "credito_privado": "Abertura Crédito Privado", "diesel_local": "Aumento Diesel Local", "credito_comercial": "Oferta Crédito Comercial", "tarifas_imp": "Tarifas de Importação", "export_tmec": "Exportações via T-MEC", "reservatorios_baixos": "Reservatórios Baixos", "reservatorios_cheios": "Reservatórios Cheios", "seca_sinaloa": "Seca Crônica (Sinaloa)", "aportes_agro": "Aportes Agroindústria", "desvalorizacao_peso": "Desvalorização do Peso", "fomento_estatal": "Fomento Estatal Grãos", "seca_irrigados": "Seca Distritos Irrigados", "cotacao_forrageiros": "Alta Forrageiros", "inflacao_servicos": "Inflação Serviços", "consumo_carnes": "Aumento Consumo Carnes", "queda_milho_cbot": "Queda Milho (CBOT)", "expansao_sinaloa": "Expansão em Sinaloa", "maquinas_americanas": "Preço Máq. Americanas", "verba_familiar": "Verba Apoio Familiar", "queda_remessas": "Queda Remessas", "novas_areas": "Novas Áreas Irrigadas", "frete_logistica": "Frete/Logística Cara", "consumo_eua": "Consumo EUA", "queda_juros": "Queda de Juros", "moedas_andinas": "Desval. Moedas Andinas", "credito_coop": "Crédito Cooperativas", "suplementacao": "Suplementação Encarecida", "el_nino": "El Niño Moderado", "la_nina": "La Niña (Estiagem)", "produtividade_alta": "Produtividade Acima Média", "ataques_cambiais": "Instabilidade Moeda", "cotacao_soja": "Cotação Soja CBOT", "fluxo_caixa": "Estrangulamento Caixa", "margens_dolar": "Margens Sólidas (US$)", "licenciamentos": "Licenciamentos Ambientais", "superciclo": "Superciclo Commodities", "fuga_capital": "Fuga Capital Estrangeiro", "repasses_coop": "Repasses Cooperativas", "escassez_hidrica": "Escassez Hídrica", "safras_recordes": "Safras Recordes", "estiagem_longa": "Períodos de Estiagem", "precos_soja": "Preços Globais Elevados", "esmagamento_margem": "Esmagamento de Margem", "parcerias_tradings": "Parcerias Tradings", "incerteza_juridica": "Incerteza Jurídica", "verba_credito": "Liberação Verba Crédito", "inflacao_sementes": "Inflação Sementes", "atraso_chuvas": "Atraso nas Chuvas", "excesso_chuvas": "Excesso de Chuvas", "pressao_sanitaria": "Pressão Sanitária", "retracao_export": "Retração Exportações"}, "en": {"realized": "Realized", "var_cycle": "Cycle Var.", "seg": "🚜 Segment", "total": "Total:", "legend_title": "Impact Legend:", "legend_hp": "High Positive", "legend_mp": "Medium Positive", "legend_n": "Neutral", "legend_mn": "Medium Negative", "legend_hn": "High Negative", "matrix_title": "Impact & Drivers Matrix", "matrix": "Impact & Drivers Matrix", "driver_status_title": "Market Drivers Status", "proj_vol": "Volume Projection", "export": "Export to Excel", "version": "Version", "updated": "Updated", "select_prod": "Select Product Family:", "month": "Month", "current_forecast": "Current Forecast", "kpi_model_title": "Projection Algorithm", "kpi_model_desc": "Machine Learning Pipeline", "kpi_vol_title": "Total Projected Volume (LATAM)", "kpi_vol_desc": "Cycle", "kpi_var_title": "Volume Variation", "kpi_var_desc": "Overall Impact", "positive": "Positive", "critical": "Critical", "warning": "Warning", "positivo": "Positive", "negativo": "Negative", "neutro": "Neutral", "incerto": "Uncertain", "jan": "January", "feb": "February", "mar": "March", "apr": "April", "may": "May", "jun": "June", "jul": "July", "aug": "August", "sep": "September", "oct": "October", "nov": "November", "dec": "December", "current": "Current", "soja": "Soy", "milho": "Corn", "algodao": "Cotton", "acucar": "Sugarcane", "cafe": "Coffee", "frutas": "Fruits", "trigo": "Wheat", "arroz": "Rice", "horticultura": "Horticulture", "pecuaria": "Livestock", "sorgo": "Sorghum", "amendoim": "Peanut", "graos_forrageiros": "Forage Grains", "milho_branco": "White Corn", "agave": "Agave", "avocado": "Avocado", "pronaf": "PRONAF Availability", "juros_varejo": "Retail Interest Rate", "margem_pecuaria": "Livestock Margin", "custo_racao": "Feed Cost", "credito_geral": "Rural Credit", "clima_sul": "Weather (South/Southeast)", "moderfrota": "Moderfrota Rates", "rentabilidade": "Crop Profitability", "expansao_area": "Area Expansion", "diesel": "Diesel Price", "dolar_alto": "High Dollar (Export)", "juros_altos": "High Interest Rates", "pronamp": "PRONAMP Availability", "quebra_safra": "Crop Failure", "safra_recorde": "Record Harvest", "janela_colheita": "Short Window (Pressure)", "cambio_forte": "Unfavorable Exchange Rate", "barter": "Barter Incentive", "margem_corp": "Corporate Margin Drop", "rotacao_inv": "Winter Crop Rotation", "janela_clima": "Short Climate Window", "estagnacao_area": "Area Stagnation", "pressao_clima": "High Climate Pressure", "inflacao_defensivos": "Pesticide Inflation", "subsidios_pesos": "Subsidies in Pesos", "juros_comerciais": "High Commercial Interest", "margem_boi": "Cattle Margin", "seca_severa": "Severe Drought", "credito_nacional": "National Industrial Credit", "retenciones": "Export Tax Increase", "tarifa_contratista": "Contractor Tariff", "pecas_importadas": "Higher Cost of Imported Parts", "brecha_cambial": "Exchange Gap Increase", "escassez_graos": "Grain Scarcity (Barter)", "dolar_soja": "Soy Dollar Windows", "restricao_imp": "Import Restrictions", "liberacao_divisas": "Currency Release", "preco_cbot": "Int. Price Drop (CBOT)", "subsidio_ind": "National Industry Subsidy", "corte_gastos": "Public Credit Cut", "seca_lanina": "La Niña Drought", "preco_fob": "FOB Rosario Price", "greves_portos": "Port Strikes", "dolar_oficial": "Official Dollar Access", "desinvestimento": "Mega Pools Divestment", "liquidez_imediata": "Immediate Liquidity", "custo_insumos": "High Input Cost", "pacotes_tec": "Trader Packages", "restricao_dolares": "Corp. Dollar Restriction", "quimicos_dolar": "Chemicals in Dollars", "remessas_eua": "Remittances from USA", "corte_programas": "Federal Program Cuts", "peso_valorizado": "Appreciated Peso", "inflacao_pecas": "Parts Inflation", "credito_privado": "Private Credit Opening", "diesel_local": "Local Diesel Increase", "credito_comercial": "Commercial Credit Offer", "tarifas_imp": "Import Tariffs", "export_tmec": "Exports via USMCA", "reservatorios_baixos": "Low Reservoirs", "reservatorios_cheios": "Full Reservoirs", "seca_sinaloa": "Chronic Drought (Sinaloa)", "aportes_agro": "Agribusiness Contributions", "desvalorizacao_peso": "Peso Devaluation", "fomento_estatal": "State Grain Incentive", "seca_irrigados": "Drought in Irrigated Districts", "cotacao_forrageiros": "High Forage Prices", "inflacao_servicos": "Services Inflation", "consumo_carnes": "Meat Consumption Increase", "queda_milho_cbot": "Corn Drop (CBOT)", "expansao_sinaloa": "Expansion in Sinaloa", "maquinas_americanas": "American Machinery Price", "verba_familiar": "Family Support Fund", "queda_remessas": "Remittances Drop", "novas_areas": "New Irrigated Areas", "frete_logistica": "Expensive Freight/Logistics", "consumo_eua": "USA Consumption", "queda_juros": "Interest Rate Drop", "moedas_andinas": "Andean Currency Devaluation", "credito_coop": "Cooperative Credit", "suplementacao": "Expensive Supplementation", "el_nino": "Moderate El Niño", "la_nina": "La Niña (Drought)", "produtividade_alta": "Above Average Productivity", "ataques_cambiais": "Currency Instability", "cotacao_soja": "Soybean Price CBOT", "fluxo_caixa": "Cash Flow Squeeze", "margens_dolar": "Solid Margins (US$)", "licenciamentos": "Environmental Licensing", "superciclo": "Commodities Supercycle", "fuga_capital": "Foreign Capital Flight", "repasses_coop": "Cooperative Transfers", "escassez_hidrica": "Water Scarcity", "safras_recordes": "Record Harvests", "estiagem_longa": "Long Drought Periods", "precos_soja": "High Global Soy Prices", "esmagamento_margem": "Margin Squeeze", "parcerias_tradings": "Trading Partnerships", "incerteza_juridica": "Legal Uncertainty", "verba_credito": "Credit Fund Release", "inflacao_sementes": "Seed Inflation", "atraso_chuvas": "Rain Delay", "excesso_chuvas": "Excessive Rain", "pressao_sanitaria": "Sanitary Pressure", "retracao_export": "Export Retraction"}, "es": {"realized": "Realizado", "var_cycle": "Var. Ciclo", "seg": "🚜 Segmento", "total": "Total:", "legend_title": "Leyenda de Impacto:", "legend_hp": "Alto Positivo", "legend_mp": "Medio Positivo", "legend_n": "Neutro", "legend_mn": "Medio Negativo", "legend_hn": "Alto Negativo", "matrix_title": "Matriz de Impacto y Drivers", "matrix": "Matriz de Impacto y Drivers", "driver_status_title": "Estado de los Drivers de Mercado", "proj_vol": "Proyección de Volúmenes", "export": "Exportar a Excel", "version": "Versión", "updated": "Actualizado", "select_prod": "Seleccione Familia de Producto:", "month": "Mes", "current_forecast": "Forecast Actual", "kpi_model_title": "Algoritmo de Proyección", "kpi_model_desc": "Pipeline de Machine Learning", "kpi_vol_title": "Volumen Total Proyectado (LATAM)", "kpi_vol_desc": "Ciclo", "kpi_var_title": "Variación de Volumen", "kpi_var_desc": "Impacto General", "positive": "Positivo", "critical": "Crítico", "warning": "Atención", "positivo": "Positivo", "negativo": "Negativo", "neutro": "Neutro", "incerto": "Incierto", "jan": "Enero", "feb": "Febrero", "mar": "Marzo", "apr": "Abril", "may": "Mayo", "jun": "Junio", "jul": "Julio", "aug": "Agosto", "sep": "Septiembre", "oct": "Octubre", "nov": "Noviembre", "dec": "Diciembre", "current": "Actual", "soja": "Soja", "milho": "Maíz", "algodao": "Algodón", "acucar": "Caña", "cafe": "Café", "frutas": "Frutas", "trigo": "Trigo", "arroz": "Arroz", "horticultura": "Horticultura", "pecuaria": "Ganadería", "sorgo": "Sorgo", "amendoim": "Maní", "graos_forrageiros": "Granos Forrajeros", "milho_branco": "Maíz Blanco", "agave": "Agave", "avocado": "Aguacate", "pronaf": "Disponibilidad PRONAF", "juros_varejo": "Tasa de Interés (Minorista)", "margem_pecuaria": "Margen de Ganadería", "custo_racao": "Costo de Alimento", "credito_geral": "Crédito Rural", "clima_sul": "Clima (Sur/Sudeste)", "moderfrota": "Tasas Moderfrota", "rentabilidade": "Rentabilidad de Cosecha", "expansao_area": "Expansión de Área", "diesel": "Precio del Diesel", "dolar_alto": "Dólar Alto (Exportación)", "juros_altos": "Intereses Altos", "pronamp": "Disponibilidad PRONAMP", "quebra_safra": "Pérdida de Cosecha", "safra_recorde": "Cosecha Récord", "janela_colheita": "Ventana Corta (Presión)", "cambio_forte": "Tipo de Cambio Desfavorable", "barter": "Fomento de Trueque", "margem_corp": "Caída Margen Corporativo", "rotacao_inv": "Rotación Cultivos de Invierno", "janela_clima": "Ventana Climática Corta", "estagnacao_area": "Estancamiento de Área", "pressao_clima": "Alta Presión Climática", "inflacao_defensivos": "Inflación de Defensivos", "subsidios_pesos": "Subsidios en Pesos", "juros_comerciais": "Intereses Comerciales Altos", "margem_boi": "Margen Ganado Gordo", "seca_severa": "Sequía Severa", "credito_nacional": "Crédito Industrial Nacional", "retenciones": "Aumento de Retenciones", "tarifa_contratista": "Tarifa de Contratista", "pecas_importadas": "Encarecimiento Piezas Imp.", "brecha_cambial": "Aumento Brecha Cambial", "escassez_graos": "Escasez Granos (Canje)", "dolar_soja": "Ventanas Dólar Soja", "restricao_imp": "Restricción de Importaciones", "liberacao_divisas": "Liberación de Divisas", "preco_cbot": "Caída Precio Int. (CBOT)", "subsidio_ind": "Subsidio Industria Nac.", "corte_gastos": "Recorte de Crédito Público", "seca_lanina": "Sequía La Niña", "preco_fob": "Precio FOB Rosario", "greves_portos": "Huelgas Portuarias", "dolar_oficial": "Acceso Dólar Oficial", "desinvestimento": "Desinversión Mega Pools", "liquidez_imediata": "Liquidez Inmediata", "custo_insumos": "Alto Costo de Insumos", "pacotes_tec": "Paquetes de Traders", "restricao_dolares": "Restricción Dólares Corp.", "quimicos_dolar": "Químicos en Dólares", "remessas_eua": "Remesas de EUA", "corte_programas": "Recorte Programas Federales", "peso_valorizado": "Peso Apreciado", "inflacao_pecas": "Inflación de Piezas", "credito_privado": "Apertura Crédito Privado", "diesel_local": "Aumento Diesel Local", "credito_comercial": "Oferta Crédito Comercial", "tarifas_imp": "Tarifas de Importación", "export_tmec": "Exportaciones vía T-MEC", "reservatorios_baixos": "Embalses Bajos", "reservatorios_cheios": "Embalses Llenos", "seca_sinaloa": "Sequía Crónica (Sinaloa)", "aportes_agro": "Aportes Agroindustria", "desvalorizacao_peso": "Devaluación del Peso", "fomento_estatal": "Fomento Estatal de Granos", "seca_irrigados": "Sequía Distritos de Riego", "cotacao_forrageiros": "Alta Forrajeros", "inflacao_servicos": "Inflación de Servicios", "consumo_carnes": "Aumento Consumo de Carnes", "queda_milho_cbot": "Caída Maíz (CBOT)", "expansao_sinaloa": "Expansión en Sinaloa", "maquinas_americanas": "Precio Maq. Americanas", "verba_familiar": "Fondo de Apoyo Familiar", "queda_remessas": "Caída de Remesas", "novas_areas": "Nuevas Áreas de Riego", "frete_logistica": "Flete/Logística Caro", "consumo_eua": "Consumo de EUA", "queda_juros": "Caída de Intereses", "moedas_andinas": "Deval. Monedas Andinas", "credito_coop": "Crédito Cooperativas", "suplementacao": "Suplementación Cara", "el_nino": "El Niño Moderado", "la_nina": "La Niña (Sequía)", "produtividade_alta": "Productividad Sobre Promedio", "ataques_cambiais": "Inestabilidad Moneda", "cotacao_soja": "Cotización Soja CBOT", "fluxo_caixa": "Estrangulamiento de Caja", "margens_dolar": "Márgenes Sólidos (US$)", "licenciamentos": "Licencias Ambientales", "superciclo": "Superciclo de Commodities", "fuga_capital": "Fuga de Capital Extranjero", "repasses_coop": "Transferencias de Cooperativas", "escassez_hidrica": "Escasez Hídrica", "safras_recordes": "Cosechas Récord", "estiagem_longa": "Períodos de Sequía", "precos_soja": "Precios Globales de Soja Altos", "esmagamento_margem": "Compresión de Márgenes", "parcerias_tradings": "Alianzas con Tradings", "incerteza_juridica": "Incertidumbre Jurídica", "verba_credito": "Liberación Fondo de Crédito", "inflacao_sementes": "Inflación de Semillas", "atraso_chuvas": "Retraso en Lluvias", "excesso_chuvas": "Exceso de Lluvias", "pressao_sanitaria": "Presión Sanitaria", "retracao_export": "Retracción de Exportaciones"}};
+        const chartsData = {};
+        let currentLang = 'pt';
+        let renderizedCharts = {};
+
+        // --- SISTEMA DE ABAS (PAÍSES) ---
+        function openCountry(evt, countryName) {
+            let i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("country-tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("country-tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(countryName).style.display = "block";
+            document.getElementById(countryName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            // Aciona renderização de gráficos na aba ativa
+            renderActiveCharts();
+        }
+
+        // --- SISTEMA DE ABAS (PRODUTOS) ---
+        function openProduct(evt, prodId, countryName) {
+            let i, tabcontent, tablinks;
+            let parentDiv = document.getElementById(countryName);
+            
+            tabcontent = parentDiv.getElementsByClassName("prod-tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = parentDiv.getElementsByClassName("prod-tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(prodId).style.display = "block";
+            document.getElementById(prodId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            renderActiveCharts();
+        }
+
+        // --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) ---
+        function renderActiveCharts() {
+            // Pega todos os conteúdos de produto que estão visíveis no momento
+            const activeContents = document.querySelectorAll('.prod-tab-content.active');
+            
+            activeContents.forEach(content => {
+                // Verifica se o parent (país) também está ativo
+                if (content.closest('.country-tab-content').classList.contains('active')) {
+                    const prodId = content.id;
+                    const canvasId = 'canvas_' + prodId;
+                    
+                    if (!renderizedCharts[canvasId] && chartsData[prodId]) {
+                        const ctx = document.getElementById(canvasId).getContext('2d');
+                        renderizedCharts[canvasId] = new Chart(ctx, {
+                            type: 'bar',
+                            data: chartsData[prodId],
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'top' }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // --- SISTEMA DE TRADUÇÃO (I18N) ---
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Atualiza botões
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Atualiza chaves estáticas [data-i18n]
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+
+            // Atualiza chaves estáticas de Title (Tooltip) [data-i18n-title]
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (translations[lang] && translations[lang][key]) {
+                    el.setAttribute('title', translations[lang][key]);
+                }
+            });
+
+            // Atualiza explicações da IA dinâmicas
+            document.querySelectorAll('.i18n-text').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.i18n-text.lang-' + lang).forEach(el => el.style.display = 'inline');
+        }
+
+        // --- EXPORTAR PARA EXCEL (Formato CSV) ---
+        function exportProdExcel(prodId, fileName) {
+            let table = document.getElementById('table_' + prodId);
+            if (!table) return;
+
+            let csv = [];
+            let rows = table.querySelectorAll("tr");
+            
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll("td, th");
+                
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
+                    // Limpa % e caracteres extras para excel entender como número
+                    data = data.replace(/"/g, '""');
+                    row.push('"' + data + '"');
+                }
+                csv.push(row.join(";"));
+            }
+
+            let csvFile = new Blob(["\uFEFF"+csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+            let downloadLink = document.createElement("a");
+            downloadLink.download = fileName + "_Forecast.csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = function() {
+            setLanguage('pt');
+            renderActiveCharts();
+        };
+
+    </script>
+</body>
+</html>
