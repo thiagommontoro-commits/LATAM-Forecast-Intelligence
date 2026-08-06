@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGCO LATAM - Forecast Intelligence</title>
+    <!-- Importando Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --agco-blue: #005A9C;
+            --agco-dark: #343a40;
+            --agco-light: #f8f9fa;
+            --bg-color: #f1f3f5;
+            --pos-color: #28a745;
+            --neg-color: #dc3545;
+            --neutral-color: #adb5bd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--agco-dark);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- HEADER & KPIs --- */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .header-title h1 {
+            margin: 0;
+            color: var(--agco-blue);
+            font-size: 24px;
+        }
+
+        .header-title p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .kpi-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--agco-light);
+            padding: 15px 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--agco-blue);
+            min-width: 150px;
+        }
+
+        .kpi-card.positive { border-left-color: var(--pos-color); }
+        .kpi-card.negative { border-left-color: var(--neg-color); }
+
+        .kpi-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 800;
+        }
+
+        /* --- TABS DE PAÍS --- */
+        .country-tabs-nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .country-tab-btn {
+            background: white;
+            border: 1px solid #dee2e6;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6c757d;
+        }
+
+        .country-tab-btn.active, .country-tab-btn:hover {
+            background: var(--agco-blue);
+            color: white;
+            border-color: var(--agco-blue);
+        }
+
+        /* --- TABS DE PRODUTO --- */
+        .prod-tabs-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+
+        .prod-tab-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #6c757d;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        .prod-tab-btn.active {
+            background: var(--agco-blue);
+            color: white;
+        }
+
+        .prod-tab-btn:hover:not(.active) {
+            background: #e9ecef;
+        }
+
+        /* --- TABELAS --- */
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--agco-dark);
+        }
+
+        td.num {
+            text-align: right;
+        }
+
+        /* --- BOTÃO EXCEL --- */
+        .btn-excel {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #107c41; /* Verde Excel */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-excel:hover {
+            background-color: #0c5e31;
+        }
+
+        /* --- LEGENDA --- */
+        .legend-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-box { width: 14px; height: 14px; border-radius: 3px; }
+        
+        .impact-high-pos { color: white; background-color: #198754; text-align: center; font-weight: bold; }
+        .impact-med-pos { color: white; background-color: #79c99e; text-align: center; font-weight: bold; }
+        .impact-neutral { color: white; background-color: #adb5bd; text-align: center; font-weight: bold; }
+        .impact-med-neg { color: white; background-color: #f1aeb5; text-align: center; font-weight: bold; }
+        .impact-high-neg { color: white; background-color: #dc3545; text-align: center; font-weight: bold; }
+
+        .impact-cell {
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* --- CARDS DA IA (DRIVERS) --- */
+        .driver-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .driver-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-top: 4px solid var(--neutral-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .driver-card.up { border-top-color: var(--pos-color); }
+        .driver-card.down { border-top-color: var(--neg-color); }
+
+        .driver-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .driver-text {
+            font-size: 13px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+
+        /* CONTROLES DE IDIOMA */
+        .lang-controls {
+            margin-bottom: 15px;
+            text-align: right;
+        }
+        .lang-btn {
+            background: white; border: 1px solid #ccc; padding: 4px 8px; margin-left: 5px; border-radius: 4px; cursor: pointer;
+        }
+        .lang-btn.active { background: var(--agco-blue); color: white; border-color: var(--agco-blue); }
+        .i18n-text { display: none; }
+        
+    </style>
+</head>
+<body>
+
+    <div class="lang-controls">
+        <button class="lang-btn active" onclick="setLanguage('pt')">PT</button>
+        <button class="lang-btn" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('es')">ES</button>
+    </div>
+
+    <!-- HEADER -->
+    <div class="dashboard-header">
+        <div class="header-title">
+            <h1>AGCO LATAM - Forecast Intelligence</h1>
+            <p><span data-i18n="updated">Atualizado</span>: {update_date} | <span data-i18n="version">Versão</span>: {forecast_version}</p>
+        </div>
+        <div class="kpi-container">
+            <div class="kpi-card info">
+                <div class="kpi-title" data-i18n="kpi_vol_title">Volume Total Projetado</div>
+                <div class="kpi-value" style="color: var(--agco-blue);">{total_atual_str}</div>
+            </div>
+            <div class="kpi-card {cor_kpi}">
+                <div class="kpi-title" data-i18n="kpi_var_title">Variação de Volume</div>
+                <div class="kpi-value" style="color: {cor_texto};">{texto_var}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NAVEGAÇÃO DE PAÍSES -->
+    <div class="country-tabs-nav">
+        {html_country_tabs}
+    </div>
+
+    <!-- CONTEÚDO DOS PAÍSES (INJETADO PELO PYTHON) -->
+    {html_country_contents}
+
+    <script>
+        // --- DADOS INJETADOS PELO PYTHON ---
+        const translations = {translations_json};
+        const chartsData = {all_charts_json};
+        let currentLang = 'pt';
+        let renderizedCharts = {};
+
+        // --- SISTEMA DE ABAS (PAÍSES) ---
+        function openCountry(evt, countryName) {
+            let i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("country-tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("country-tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(countryName).style.display = "block";
+            document.getElementById(countryName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            // Aciona renderização de gráficos na aba ativa
+            renderActiveCharts();
+        }
+
+        // --- SISTEMA DE ABAS (PRODUTOS) ---
+        function openProduct(evt, prodId, countryName) {
+            let i, tabcontent, tablinks;
+            let parentDiv = document.getElementById(countryName);
+            
+            tabcontent = parentDiv.getElementsByClassName("prod-tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = parentDiv.getElementsByClassName("prod-tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(prodId).style.display = "block";
+            document.getElementById(prodId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            renderActiveCharts();
+        }
+
+        // --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) ---
+        function renderActiveCharts() {
+            // Pega todos os conteúdos de produto que estão visíveis no momento
+            const activeContents = document.querySelectorAll('.prod-tab-content.active');
+            
+            activeContents.forEach(content => {
+                // Verifica se o parent (país) também está ativo
+                if (content.closest('.country-tab-content').classList.contains('active')) {
+                    const prodId = content.id;
+                    const canvasId = 'canvas_' + prodId;
+                    
+                    if (!renderizedCharts[canvasId] && chartsData[prodId]) {
+                        const ctx = document.getElementById(canvasId).getContext('2d');
+                        renderizedCharts[canvasId] = new Chart(ctx, {
+                            type: 'bar',
+                            data: chartsData[prodId],
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'top' }
+                                },
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // --- SISTEMA DE TRADUÇÃO (I18N) ---
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Atualiza botões
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Atualiza chaves estáticas [data-i18n]
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+
+            // Atualiza chaves estáticas de Title (Tooltip) [data-i18n-title]
+            document.querySelectorAll('[data-i18n-title]').forEach(el => {
+                const key = el.getAttribute('data-i18n-title');
+                if (translations[lang] && translations[lang][key]) {
+                    el.setAttribute('title', translations[lang][key]);
+                }
+            });
+
+            // Atualiza explicações da IA dinâmicas
+            document.querySelectorAll('.i18n-text').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.i18n-text.lang-' + lang).forEach(el => el.style.display = 'inline');
+        }
+
+        // --- EXPORTAR PARA EXCEL (Formato CSV) ---
+        function exportProdExcel(prodId, fileName) {
+            let table = document.getElementById('table_' + prodId);
+            if (!table) return;
+
+            let csv = [];
+            let rows = table.querySelectorAll("tr");
+            
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll("td, th");
+                
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").trim();
+                    // Limpa % e caracteres extras para excel entender como número
+                    data = data.replace(/"/g, '""');
+                    row.push('"' + data + '"');
+                }
+                csv.push(row.join(";"));
+            }
+
+            let csvFile = new Blob(["\uFEFF"+csv.join("\n")], {type: "text/csv;charset=utf-8;"});
+            let downloadLink = document.createElement("a");
+            downloadLink.download = fileName + "_Forecast.csv";
+            downloadLink.href = window.URL.createObjectURL(csvFile);
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = function() {
+            setLanguage('pt');
+            renderActiveCharts();
+        };
+
+    </script>
+</body>
+</html>
